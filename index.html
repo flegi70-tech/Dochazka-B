@@ -34,8 +34,17 @@ td input,td select{padding:5px 3px;font-size:.85rem}
 .ph{display:none}
 td button{padding:4px 8px}
 .off .a,.off .b{opacity:.45}
-@media print{.off .a,.off .b{visibility:hidden}}
-@media print{body{background:#fff;color:#000}.card{border:1px solid #bbb;break-inside:avoid}.btns,.nopr{display:none}.ph{display:block;font-size:1.1rem;margin-bottom:8px}input,select{border:0;background:transparent;color:#000;-webkit-appearance:none;appearance:none}.sets input{font-weight:600}}
+@page{size:A4;margin:10mm}
+@media print{.off .a,.off .b{visibility:hidden}
+html,body{font-size:11px}
+main{max-width:none;padding:0}
+h1,.sets{display:none}
+.card{padding:6px 8px;margin-bottom:6px}
+td{padding:0 2px;line-height:1.15}
+td input,td select{padding:1px 2px;font-size:11px}
+th{padding:2px 4px;font-size:10px}
+.sum{font-size:12px}}
+@media print{body{background:#fff;color:#000}.card{border:1px solid #bbb;break-inside:avoid}.btns,.nopr{display:none}.ph{display:block;font-size:13px;margin-bottom:4px}input,select{border:0;background:transparent;color:#000;-webkit-appearance:none;appearance:none}.sets input{font-weight:600}}
 </style>
 </head>
 <body>
