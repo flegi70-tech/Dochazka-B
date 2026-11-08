@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Docházka</title>
+<style>
+:root{--bg:#f6f8f6;--card:#fff;--tx:#1f2a24;--mu:#6b7a70;--ac:#15803d;--bd:#dce4de;--wk:#eef3ef;--b1:#2563eb;--b2:#c2410c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101814;--card:#1a2620;--tx:#eef4f0;--mu:#97a89d;--ac:#4ade80;--bd:#2f4036;--wk:#22322a;--b1:#60a5fa;--b2:#fb923c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101814;--card:#1a2620;--tx:#eef4f0;--mu:#97a89d;--ac:#4ade80;--bd:#2f4036;--wk:#22322a;--b1:#60a5fa;--b2:#fb923c;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:14px}
+h1{font-size:1.35rem;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:.75rem;color:var(--mu);margin-bottom:3px}
+input,select{width:100%;padding:7px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--tx);font:inherit;min-width:0}
+button{border:0;border-radius:8px;background:var(--ac);color:#fff;font:inherit;padding:10px 14px;cursor:pointer}
+button.x{background:transparent;color:var(--tx);border:1px solid var(--bd)}
+@media (prefers-color-scheme:dark){button{color:#052e16}}
+table{border-collapse:collapse;width:100%}
+th{font-size:.72rem;color:var(--mu);text-align:left;padding:4px}
+td{padding:3px 2px}
+tr.we td{background:var(--wk)}
+td.dt{font-size:.85rem;white-space:nowrap;padding-left:4px}
+td.h{text-align:right;font-weight:600;font-size:.85rem;white-space:nowrap;padding-right:4px}
+td input,td select{padding:5px 3px;font-size:.85rem}
+.w1{border-left:4px solid var(--b1)}.w2{border-left:4px solid var(--b2)}
+.sum{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;font-size:.95rem}
+.sum b{text-align:right}
+.tt{font-weight:700;border-top:2px solid var(--bd);padding-top:4px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.ph{display:none}
+td button{padding:4px 8px}
+@media print{body{background:#fff;color:#000}.card{border:1px solid #bbb;break-inside:avoid}.btns,.nopr{display:none}.ph{display:block;font-size:1.1rem;margin-bottom:8px}input,select{border:0;background:transparent;color:#000;-webkit-appearance:none;appearance:none}.sets input{font-weight:600}}
+</style>
+</head>
+<body>
+<main>
+<h1>Docházka</h1>
+<div class="card sets">
+<div class="g">
+<div><label>Jméno</label><input id="nm" placeholder="Jméno a příjmení"></div>
+<div><label>Měsíc</label><input id="mo" type="month"></div>
+<div><label>Provozovna 1</label><input id="w1"></div>
+<div><label>Provozovna 2</label><input id="w2"></div>
+<div><label>Mzda za hodinu (Kč, volitelné)</label><input id="rt" type="number" min="0" step="any" placeholder="např. 200"></div>
+</div>
+</div>
+<div class="card"><div class="ph" id="ph"></div>
+<table><thead><tr><th>Den</th><th>Provozovna</th><th>Od</th><th>Do</th><th style="text-align:right">Hod.</th><th class="nopr"></th></tr></thead><tbody id="tb"></tbody></table></div>
+<div class="card"><div class="sum" id="sm"></div></div>
+<div class="btns nopr"><button id="pdf">Uložit PDF</button><button class="x" id="snd">Odeslat</button><button class="x" id="clr">Vymazat měsíc</button></div>
+<p class="nopr" style="color:var(--mu);font-size:.8rem">„Uložit PDF“ otevře tisk, v něm zvol Uložit jako PDF. „Odeslat“ sdílí souhrn textem (e-mail, zprávy). Data zůstávají jen v tomto prohlížeči.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const MN=['Leden','Únor','Březen','Duben','Květen','Červen','Červenec','Srpen','Září','Říjen','Listopad','Prosinec'];
+const DN=['Ne','Po','Út','St','Čt','Pá','So'];
+let S={nm:'',rt:'',w1:'Provozovna 1',w2:'Provozovna 2',d:{}};
+try{const x=JSON.parse(localStorage.getItem('dz'));if(x&&x.d)S=x}catch(e){}
+const save=()=>{try{localStorage.setItem('dz',JSON.stringify(S))}catch(e){}};
+const now=new Date();
+let M=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+const fh=h=>h.toLocaleString('cs-CZ',{maximumFractionDigits:2});
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+function hrs(e){
+ if(!e||!e.a||!e.b)return 0;
+ const [ah,am]=e.a.split(':').map(Number),[bh,bm]=e.b.split(':').map(Number);
+ let a=ah*60+am,b=bh*60+bm;if(b<=a)b+=1440;
+ return (b-a)/60;
+}
+const mname=()=>{const [y,m]=M.split('-').map(Number);return MN[m-1]+' '+y};
+function render(){
+ $('nm').value=S.nm;$('mo').value=M;$('w1').value=S.w1;$('w2').value=S.w2;$('rt').value=S.rt;
+ const [y,m]=M.split('-').map(Number),n=new Date(y,m,0).getDate();
+ let h='';
+ for(let d=1;d<=n;d++){
+  const dt=new Date(y,m-1,d),k=M+'-'+String(d).padStart(2,'0'),e=S.d[k]||{w:'',a:'',b:''},wd=dt.getDay();
+  h+='<tr class="'+((wd==0||wd==6)?'we':'')+'" data-k="'+k+'"><td class="dt">'+DN[wd]+' '+d+'.</td>'+
+  '<td><select class="s">'+['','1','2'].map(v=>'<option value="'+v+'"'+(e.w===v?' selected':'')+'>'+(v==='1'?esc(S.w1)||'Prov. 1':v==='2'?esc(S.w2)||'Prov. 2':'–')+'</option>').join('')+'</select></td>'+
+  '<td><input class="a" type="time" value="'+esc(e.a)+'"></td><td><input class="b" type="time" value="'+esc(e.b)+'"></td><td class="h"></td><td class="nopr"><button class="x r nopr" title="Vynulovat den">↺</button></td></tr>';
+ }
+ $('tb').innerHTML=h;calc();
+}
+function calc(){
+ const t={1:0,2:0},r=+S.rt||0;
+ document.querySelectorAll('#tb tr').forEach(tr=>{
+  const e=S.d[tr.dataset.k];const v=hrs(e);
+  tr.querySelector('.h').textContent=v?fh(v):'';
+  if(v&&e.w)t[e.w]+=v;
+ });
+ const tot=t[1]+t[2];
+ let s='<span>'+esc(S.w1||'Provozovna 1')+'</span><b>'+fh(t[1])+' h</b><b>'+(r?fh(Math.round(t[1]*r))+' Kč':'')+'</b>'+
+ '<span>'+esc(S.w2||'Provozovna 2')+'</span><b>'+fh(t[2])+' h</b><b>'+(r?fh(Math.round(t[2]*r))+' Kč':'')+'</b>'+
+ '<span class="tt">Celkem</span><b class="tt">'+fh(tot)+' h</b><b class="tt">'+(r?fh(Math.round(tot*r))+' Kč':'')+'</b>';
+ $('sm').innerHTML=s;
+ $('ph').innerHTML='<b>'+esc(S.nm||'Docházka')+'</b> – '+mname()+(r?' (mzda '+fh(r)+' Kč/h)':'');
+ return {t,tot,r};
+}
+$('tb').addEventListener('input',e=>{
+ const tr=e.target.closest('tr');if(!tr)return;
+ const k=tr.dataset.k,o=S.d[k]||(S.d[k]={w:'',a:'',b:''});
+ if(e.target.classList.contains('s'))o.w=e.target.value;
+ if(e.target.classList.contains('a'))o.a=e.target.value;
+ if(e.target.classList.contains('b'))o.b=e.target.value;
+ if((o.a||o.b)&&!o.w){o.w='1';tr.querySelector('.s').value='1'}
+ save();calc();
+});
+$('tb').addEventListener('click',e=>{
+ const b=e.target.closest('.r');if(!b)return;
+ const tr=b.closest('tr');delete S.d[tr.dataset.k];
+ tr.querySelector('.s').value='';tr.querySelector('.a').value='';tr.querySelector('.b').value='';
+ save();calc();
+});
+$('tb').addEventListener('focusin',e=>{
+ const t=e.target,tr=t.closest('tr');
+ if(!tr||!(t.classList.contains('a')||t.classList.contains('b'))||t.value)return;
+ t.value=t.classList.contains('a')?'08:00':'16:00';
+ t.dispatchEvent(new Event('input',{bubbles:true}));
+});
+$('nm').oninput=e=>{S.nm=e.target.value;save();calc()};
+$('rt').oninput=e=>{S.rt=e.target.value;save();calc()};
+['w1','w2'].forEach(i=>$(i).onchange=e=>{S[i]=e.target.value;save();render()});
+$('mo').onchange=e=>{if(e.target.value){M=e.target.value;render()}};
+$('pdf').onclick=()=>window.print();
+$('clr').onclick=()=>{if(!confirm('Vymazat všechny záznamy za '+mname()+'?'))return;Object.keys(S.d).forEach(k=>{if(k.startsWith(M))delete S.d[k]});save();render()};
+$('snd').onclick=async()=>{
+ const c=calc();let tx='Docházka – '+(S.nm||'')+' – '+mname()+'\n\n';
+ Object.keys(S.d).sort().filter(k=>k.startsWith(M)).forEach(k=>{
+  const e=S.d[k],v=hrs(e);if(!v)return;
+  const p=k.split('-');
+  tx+=(+p[2])+'.'+(+p[1])+'. '+(e.w==='1'?S.w1:e.w==='2'?S.w2:'')+' '+e.a+'–'+e.b+' ('+fh(v)+' h)\n';
+ });
+ tx+='\n'+S.w1+': '+fh(c.t[1])+' h\n'+S.w2+': '+fh(c.t[2])+' h\nCelkem: '+fh(c.tot)+' h';
+ if(c.r)tx+='\nMzda: '+fh(Math.round(c.tot*c.r))+' Kč';
+ const ti='Docházka '+mname();
+ try{if(navigator.share){await navigator.share({title:ti,text:tx});return}}catch(e){if(e&&e.name==='AbortError')return}
+ location.href='mailto:?subject='+encodeURIComponent(ti)+'&body='+encodeURIComponent(tx);
+};
+render();
+</script>
+</body>
+</html>
