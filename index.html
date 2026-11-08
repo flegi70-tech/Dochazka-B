@@ -33,6 +33,8 @@ td input,td select{padding:5px 3px;font-size:.85rem}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 .ph{display:none}
 td button{padding:4px 8px}
+.off .a,.off .b{opacity:.45}
+@media print{.off .a,.off .b{visibility:hidden}}
 @media print{body{background:#fff;color:#000}.card{border:1px solid #bbb;break-inside:avoid}.btns,.nopr{display:none}.ph{display:block;font-size:1.1rem;margin-bottom:8px}input,select{border:0;background:transparent;color:#000;-webkit-appearance:none;appearance:none}.sets input{font-weight:600}}
 </style>
 </head>
@@ -56,6 +58,7 @@ td button{padding:4px 8px}
 </main>
 <script>
 const $=id=>document.getElementById(id);
+const DA='08:00',DB='20:00'; // výchozí čas Od a Do
 const MN=['Leden','Únor','Březen','Duben','Květen','Červen','Červenec','Srpen','Září','Říjen','Listopad','Prosinec'];
 const DN=['Ne','Po','Út','St','Čt','Pá','So'];
 let S={nm:'',rt:'',w1:'Provozovna 1',w2:'Provozovna 2',d:{}};
@@ -66,12 +69,13 @@ let M=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
 const fh=h=>h.toLocaleString('cs-CZ',{maximumFractionDigits:2});
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 function hrs(e){
- if(!e||!e.a||!e.b)return 0;
- const [ah,am]=e.a.split(':').map(Number),[bh,bm]=e.b.split(':').map(Number);
+ if(!e||!e.w)return 0;
+ const [ah,am]=(e.a||DA).split(':').map(Number),[bh,bm]=(e.b||DB).split(':').map(Number);
  let a=ah*60+am,b=bh*60+bm;if(b<=a)b+=1440;
  return (b-a)/60;
 }
 const mname=()=>{const [y,m]=M.split('-').map(Number);return MN[m-1]+' '+y};
+function tsel(c,v){let o='';for(let m=0;m<1440;m+=15){const t=String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');o+='<option'+(t===v?' selected':'')+'>'+t+'</option>'}if(o.indexOf('>'+v+'<')<0)o='<option selected>'+esc(v)+'</option>'+o;return '<select class="'+c+'">'+o+'</select>'}
 function render(){
  $('nm').value=S.nm;$('mo').value=M;$('w1').value=S.w1;$('w2').value=S.w2;$('rt').value=S.rt;
  const [y,m]=M.split('-').map(Number),n=new Date(y,m,0).getDate();
@@ -80,7 +84,7 @@ function render(){
   const dt=new Date(y,m-1,d),k=M+'-'+String(d).padStart(2,'0'),e=S.d[k]||{w:'',a:'',b:''},wd=dt.getDay();
   h+='<tr class="'+((wd==0||wd==6)?'we':'')+'" data-k="'+k+'"><td class="dt">'+DN[wd]+' '+d+'.</td>'+
   '<td><select class="s">'+['','1','2'].map(v=>'<option value="'+v+'"'+(e.w===v?' selected':'')+'>'+(v==='1'?esc(S.w1)||'Prov. 1':v==='2'?esc(S.w2)||'Prov. 2':'–')+'</option>').join('')+'</select></td>'+
-  '<td><input class="a" type="time" value="'+esc(e.a)+'"></td><td><input class="b" type="time" value="'+esc(e.b)+'"></td><td class="h"></td><td class="nopr"><button class="x r nopr" title="Vynulovat den">↺</button></td></tr>';
+  '<td>'+tsel('a',e.a||DA)+'</td><td>'+tsel('b',e.b||DB)+'</td><td class="h"></td><td class="nopr"><button class="x r nopr" title="Vynulovat den">↺</button></td></tr>';
  }
  $('tb').innerHTML=h;calc();
 }
@@ -89,6 +93,7 @@ function calc(){
  document.querySelectorAll('#tb tr').forEach(tr=>{
   const e=S.d[tr.dataset.k];const v=hrs(e);
   tr.querySelector('.h').textContent=v?fh(v):'';
+  tr.classList.toggle('off',!(e&&e.w));
   if(v&&e.w)t[e.w]+=v;
  });
  const tot=t[1]+t[2];
@@ -105,20 +110,15 @@ $('tb').addEventListener('input',e=>{
  if(e.target.classList.contains('s'))o.w=e.target.value;
  if(e.target.classList.contains('a'))o.a=e.target.value;
  if(e.target.classList.contains('b'))o.b=e.target.value;
- if((o.a||o.b)&&!o.w){o.w='1';tr.querySelector('.s').value='1'}
+ if(!o.w&&(e.target.classList.contains('a')||e.target.classList.contains('b'))){o.w='1';tr.querySelector('.s').value='1'}
+ o.a=tr.querySelector('.a').value;o.b=tr.querySelector('.b').value;
  save();calc();
 });
 $('tb').addEventListener('click',e=>{
  const b=e.target.closest('.r');if(!b)return;
  const tr=b.closest('tr');delete S.d[tr.dataset.k];
- tr.querySelector('.s').value='';tr.querySelector('.a').value='';tr.querySelector('.b').value='';
+ tr.querySelector('.s').value='';tr.querySelector('.a').value=DA;tr.querySelector('.b').value=DB;
  save();calc();
-});
-$('tb').addEventListener('focusin',e=>{
- const t=e.target,tr=t.closest('tr');
- if(!tr||!(t.classList.contains('a')||t.classList.contains('b'))||t.value)return;
- t.value=t.classList.contains('a')?'08:00':'16:00';
- t.dispatchEvent(new Event('input',{bubbles:true}));
 });
 $('nm').oninput=e=>{S.nm=e.target.value;save();calc()};
 $('rt').oninput=e=>{S.rt=e.target.value;save();calc()};
@@ -131,7 +131,7 @@ $('snd').onclick=async()=>{
  Object.keys(S.d).sort().filter(k=>k.startsWith(M)).forEach(k=>{
   const e=S.d[k],v=hrs(e);if(!v)return;
   const p=k.split('-');
-  tx+=(+p[2])+'.'+(+p[1])+'. '+(e.w==='1'?S.w1:e.w==='2'?S.w2:'')+' '+e.a+'–'+e.b+' ('+fh(v)+' h)\n';
+  tx+=(+p[2])+'.'+(+p[1])+'. '+(e.w==='1'?S.w1:e.w==='2'?S.w2:'')+' '+(e.a||DA)+'–'+(e.b||DB)+' ('+fh(v)+' h)\n';
  });
  tx+='\n'+S.w1+': '+fh(c.t[1])+' h\n'+S.w2+': '+fh(c.t[2])+' h\nCelkem: '+fh(c.tot)+' h';
  if(c.r)tx+='\nMzda: '+fh(Math.round(c.tot*c.r))+' Kč';
